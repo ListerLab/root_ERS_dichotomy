@@ -1,18 +1,11 @@
 # An environmentally regulated dichotomy in cell lineages of the root
 
-This repository contains the code associated with:
+This repository contains the code used for the processing and analysis of the single-cell RNA-sequencing datasets presented in our study investigating an environmentally regulated cell state (ERS) across *Arabidopsis thaliana* root cell lineages.
 
 **Oliva M. et al. (2026). An environmentally regulated dichotomy in cell lineages of the root.**
 
 [Link to publication]
 
-## Overview
-
-This repository contains the code used for the processing and analysis of the single-cell and single-nucleus sequencing datasets presented in Oliva et al. (2026), investigating an environmentally regulated cell state (ERS) across *Arabidopsis thaliana* root cell lineages.
-
-Scripts are organised into `data/`, containing pre-processing and integration workflows used to generate the datasets analysed in the study, and `analyses/`, containing downstream analyses associated with the main and Extended Data figures.
-
-The correspondence between individual analyses and manuscript figures is detailed in [`analyses/README.md`](analyses/README.md).
 
 ## Repository structure
 
@@ -30,6 +23,7 @@ Further information is provided in [`data/README.md`](data/README.md).
 Scripts used for downstream analyses presented in the manuscript.
 
 A correspondence between analysis scripts and manuscript figures is provided in [`analyses/README.md`](analyses/README.md).
+
 
 ## Data availability
 
