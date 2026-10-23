@@ -1,0 +1,342 @@
+---
+title: "marina_snATAC"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(Signac)
+library(Seurat)
+```
+
+```{r}
+
+data <- readRDS("/Users/00103750/Downloads/processedATAC.afterIntegration.RemoveFirstComponent.rds")
+
+data
+
+```
+
+```{r pressure, echo=FALSE}
+
+chrom_assay <- CreateChromatinAssay(
+  counts = data[["PEAKS"]]$counts,
+  sep = c(":", "-"),
+  fragments = '/Users/00103750/Downloads/sorted.combined.final.tsv.gz',
+  min.cells = 1
+)
+
+chrom.seurat <- CreateSeuratObject(
+  counts = chrom_assay,
+  assay = 'PEAKS',
+  project = 'ATAC',
+  meta.data = data@meta.data
+)
+
+```
+
+
+```{r}
+
+library(ggplot2)
+
+```
+
+```{r}
+
+newlevels.all = c("root cap early", "columella","root cap tip","border cells","root cap lateral","epidermis early","hair cells early","hair cells ERS+","hair cells ERS-","non-hair cells","cortex ERS+","cortex ERS-","endodermis ERS+", "endodermis ERS-","ppp ERS+","ppp ERS-","xpp ERS+","xpp ERS-","procambium ERS+","procambium ERS-","metaphloem ERS+","metaphloem ERS-","protophloem ERS+","protophloem ERS-","metaxylem ERS+","metaxylem ERS-","protoxylem early","protoxylem ERS+","protoxylem ERS-")
+
+#data$predicted.id = factor(data$predicted.id, ordered = TRUE, levels = newlevels.all)
+
+```
+
+
+
+```{r boxplot function}
+
+BoxPlot <- function(object, features, group.by = NULL, group.order = NULL, pt.size = 0.1, add.jitter = FALSE, angle = 45, ...) {
+  require(Seurat)
+  require(ggplot2)
+
+  # Extract data
+  data <- FetchData(object, vars = c(features, group.by))
+  
+  # If no group.by provided, use 'ident'
+  if (is.null(group.by)) {
+    data[[group.by]] <- Idents(object)
+    group.by <- "ident"
+  }
+
+  # Clean column names
+  colnames(data)[1] <- "feature"
+  colnames(data)[2] <- "group"
+  
+  # Set factor levels for custom group order if provided
+  if (!is.null(group.order)) {
+    data$group <- factor(data$group, levels = group.order)
+  } else {
+    data$group <- factor(data$group, levels = unique(data$group))
+  }
+
+  # Plot
+  p <- ggplot(data, aes(x = group, y = feature, fill = group)) +
+    geom_boxplot(outlier.shape = 16, outlier.size = 1.5, ...) +
+    theme_classic() +
+    xlab(group.by) +
+    ylab(features) +
+    theme(axis.text.x = element_text(angle = angle, hjust = 1))
+  
+  # Optionally add jittered points
+  if (add.jitter) {
+    p <- p + geom_jitter(size = pt.size, width = 0.2, alpha = 0.6)
+  }
+
+  return(p)
+}
+
+
+```
+
+```{r}
+pdf("box_insertions_per_identity.pdf", width=9, height=5)
+BoxPlot(object = data, features = 'nCount_PEAKS', group.by = 'predicted.id', group.order = newlevels.all) + NoLegend()
+dev.off()
+```
+
+```{r}
+
+pdf("insertions_per_identity.pdf", width=9, height=4)
+VlnPlot(object = data, features = 'nCount_PEAKS', group.by = 'predicted.id') + NoLegend()
+dev.off()
+
+```
+
+```{r}
+pdf("box_fragments_per_identity.pdf", width=9, height=5)
+BoxPlot(object = data, features = 'n_fragment', group.by = 'predicted.id', group.order = newlevels.all) + NoLegend()
+dev.off()
+```
+
+```{r}
+
+pdf("fragments_per_identity.pdf", width=9, height=4)
+VlnPlot(object = data, features = 'n_fragment', group.by = 'predicted.id') + NoLegend()
+dev.off()
+
+```
+
+```{r}
+
+VlnPlot(object = data, features = 'frac_dup', group.by = 'predicted.id') + NoLegend() + geom_boxplot(width = 0.2, outlier.shape = NA)
+
+```
+
+```{r}
+pdf("box_tsse_per_identity.pdf", width=9, height=5)
+BoxPlot(object = data, features = 'tsse', group.by = 'predicted.id', group.order = newlevels.all) + NoLegend()
+dev.off()
+```
+
+```{r}
+pdf("tsse_per_identity.pdf", width=9, height=4)
+VlnPlot(object = data, features = 'tsse', group.by = 'predicted.id') + NoLegend()
+dev.off()
+```
+
+```{r}
+pdf("box_frip_per_identity.pdf", width=9, height=5)
+BoxPlot(object = data, features = 'FRIP', group.by = 'predicted.id', group.order = newlevels.all) + NoLegend()
+dev.off()
+```
+
+```{r}
+pdf("frip_per_identity.pdf", width=9, height=4)
+VlnPlot(object = data, features = 'FRIP', group.by = 'predicted.id') + NoLegend()
+dev.off()
+```
+
+```{r}
+
+ids <- grep("ERS",data$predicted.id,value=TRUE)
+Idents(data) <- "predicted.id"
+obj_sub <- subset(data, idents = ids)
+obj_sub$celltype <- gsub(" ERS[+-]", "", obj_sub$predicted.id)
+obj_sub$state <- gsub(".*(ERS[+-])", "\\1", obj_sub$predicted.id)
+
+
+```
+
+```{r}
+
+table(obj_sub$celltype, obj_sub$state)
+
+```
+
+
+
+```{r pressure, echo=FALSE}
+
+modules = read.table(file='/Users/00103750/Documents/analysis/snATAC/marina/data/modules.tsv', header = TRUE)
+
+```
+
+
+```{r pressure, echo=FALSE}
+
+library(dplyr)
+
+```
+
+```{r pressure, echo=FALSE}
+
+modules %>% head()
+
+```
+
+
+```{r pressure, echo=FALSE}
+
+c(modules[modules$color == 20,]$gene_name) %>% head()
+
+```
+
+```{r pressure, echo=FALSE}
+
+data = AddModuleScore(
+  object = data,
+  features = list(c(modules[modules$color == 20,]$gene_name)),
+  ctrl = 100,
+  name = "Module 20",
+  slot = "data"
+)
+
+```
+
+```{r pressure, echo=FALSE}
+
+data = AddModuleScore(
+  object = data,
+  features = list(c(modules[modules$color == 21,]$gene_name)),
+  ctrl = 100,
+  name = "Module 21",
+  slot = "data"
+)
+
+```
+
+```{r pressure, echo=FALSE}
+data$`Module 20` = data$`Module 201`
+data$`Module 21` = data$`Module 211`
+```
+
+```{r pressure, echo=FALSE}
+data@meta.data$"Module 20" = data@meta.data$"Module 201"
+data@meta.data$"Module 21" = data@meta.data$"Module 211"
+```
+
+```{r pressure, echo=FALSE}
+write.csv(data@meta.data[, c("predicted.id", "FRIP", "tsse", "Module 20", "Module 21")], file = "/Users/00103750/Documents/analysis/snATAC/marina/metadata/metadata.sub.csv", row.names = TRUE)
+```
+
+```{r}
+pdf("box_module20_per_identity.pdf", width=9, height=5)
+BoxPlot(object = data, features = 'Module 20', group.by = 'predicted.id', group.order = newlevels.all) + NoLegend()
+dev.off()
+```
+
+```{r pressure, echo=FALSE}
+pdf("module20_per_identity.pdf", width=9, height=4)
+VlnPlot(object = data, features = 'Module 20', group.by = 'predicted.id') + NoLegend() 
+dev.off()
+```
+
+```{r}
+pdf("box_module21_per_identity.pdf", width=9, height=5)
+BoxPlot(object = data, features = 'Module 21', group.by = 'predicted.id', group.order = newlevels.all) + NoLegend()
+dev.off()
+```
+
+
+```{r pressure, echo=FALSE}
+pdf("module21_per_identity.pdf", width=9, height=4)
+VlnPlot(object = data, features = 'Module 21', group.by = 'predicted.id') + NoLegend() 
+dev.off()
+```
+
+```{r pressure, echo=FALSE}
+
+DefaultAssay(obj_sub) <- "PEAKS"
+
+```
+
+```{r pressure, echo=FALSE}
+
+obj_sub <- RunTFIDF(obj_sub)
+
+```
+
+```{r pressure, echo=FALSE}
+
+obj_sub <- FindTopFeatures(obj_sub, min.cutoff = 'q0')
+
+```
+
+```{r pressure, echo=FALSE}
+
+obj_sub <- RunSVD(obj_sub, reduction.key = "LSIsubset_", reduction.name = "subset")
+
+```
+
+```{r pressure, echo=FALSE}
+
+DepthCor(obj_sub, reduction = "subset")
+
+```
+
+```{r pressure, echo=FALSE}
+
+obj_sub <- RunUMAP(object = obj_sub, reduction = 'subset', dims = 2:30, reduction.name = "umap.subset")
+
+```
+
+```{r pressure, echo=FALSE}
+pdf("umap_subset_per_identity.pdf", width=10, height=10)
+DimPlot(object = obj_sub, label = TRUE, reduction = "umap.subset", group.by = "predicted.id")
+dev.off()
+
+pdf("umap_subset_per_identity.nolegend.pdf", width=10, height=10)
+DimPlot(object = obj_sub, label = TRUE, reduction = "umap.subset", group.by = "predicted.id") + NoLegend() 
+dev.off()
+
+```
+
+```{r pressure, echo=FALSE}
+pdf("umap_all_per_identity.pdf", width=10, height=10)
+DimPlot(object = data, label = TRUE, reduction = "umap", group.by = "predicted.id")
+dev.off()
+
+pdf("umap_all_per_identity.nolegend.pdf", width=10, height=10)
+DimPlot(object = data, label = TRUE, reduction = "umap", group.by = "predicted.id") + NoLegend() 
+dev.off()
+```
+
+```{r pressure, echo=FALSE}
+
+DimPlot(object = obj_sub, label = TRUE, reduction = "umap.subset", group.by = "state")
+
+```
+
+
+```{r pressure, echo=FALSE}
+
+DimPlot(object = obj_sub, label = TRUE, reduction = "umap.subset", group.by = "predicted.id")
+
+```
+
+
+
